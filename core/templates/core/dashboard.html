@@ -1,0 +1,114 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Painel · How Much{% endblock %}
+{% block body_class %}page-dash{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+    <span class="brand-name">How<b>Much</b></span>
+  </div>
+
+  <div class="topbar-right">
+    <span class="live-tag" id="live-tag"><i class="pulse"></i> Ao vivo</span>
+    <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
+      <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+      <svg class="ico t-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+    <div class="user-chip">
+      <span class="avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</span>
+      <span class="user-meta">
+        <strong>{{ request.user.get_username }}</strong>
+        <small class="muted">{% if request.user.is_superuser %}Administrador{% else %}Usuário{% endif %}</small>
+      </span>
+    </div>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">
+        <svg class="ico" aria-hidden="true"><use href="#i-log-out"/></svg>
+      </button>
+    </form>
+  </div>
+</header>
+
+<main class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Visão geral</h1>
+      <p class="muted">Telemetria de valores · dados fictícios para demonstração</p>
+    </div>
+    <span class="muted small"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Atualizado às <b id="updated">--:--:--</b></span>
+  </div>
+
+  <section class="kpis" aria-label="Indicadores">
+    <article class="card kpi">
+      <div class="kpi-head"><span>Valor total monitorado</span><svg class="ico" aria-hidden="true"><use href="#i-wallet"/></svg></div>
+      <div class="kpi-value" id="k-total">—</div>
+      <span class="chip" id="k-total-delta">—</span>
+    </article>
+    <article class="card kpi">
+      <div class="kpi-head"><span>Custo médio por hora</span><svg class="ico" aria-hidden="true"><use href="#i-gauge"/></svg></div>
+      <div class="kpi-value" id="k-hourly">—</div>
+      <span class="muted small" id="k-range">—</span>
+    </article>
+    <article class="card kpi">
+      <div class="kpi-head"><span>Leituras por minuto</span><svg class="ico" aria-hidden="true"><use href="#i-activity"/></svg></div>
+      <div class="kpi-value" id="k-rpm">—</div>
+      <span class="muted small"><b id="k-sources">—</b> fontes online</span>
+    </article>
+    <article class="card kpi">
+      <div class="kpi-head"><span>Alertas ativos</span><svg class="ico" aria-hidden="true"><use href="#i-bell"/></svg></div>
+      <div class="kpi-value" id="k-alerts">—</div>
+      <span class="muted small">nas últimas leituras</span>
+    </article>
+  </section>
+
+  <section class="grid">
+    <article class="card chart-card">
+      <header class="card-head">
+        <div>
+          <h2>Valor ao longo do tempo</h2>
+          <p class="muted small">Últimos <span id="c-window">—</span> · pontos a cada 3 s</p>
+        </div>
+        <span class="chip" id="c-delta">—</span>
+      </header>
+      <div class="chart" id="chart" role="img" aria-label="Gráfico de linha do valor total monitorado"></div>
+    </article>
+
+    <article class="card">
+      <header class="card-head">
+        <div>
+          <h2>Por categoria</h2>
+          <p class="muted small">Participação no valor atual</p>
+        </div>
+      </header>
+      <ul class="cats" id="cats"></ul>
+    </article>
+  </section>
+
+  <article class="card">
+    <header class="card-head">
+      <div>
+        <h2>Leituras recentes</h2>
+        <p class="muted small">Fluxo das fontes conectadas</p>
+      </div>
+    </header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>ID</th><th>Fonte</th><th>Tipo</th><th class="num">Valor</th><th class="num">Variação</th><th>Status</th><th>Hora</th></tr>
+        </thead>
+        <tbody id="feed"></tbody>
+      </table>
+    </div>
+  </article>
+</main>
+
+{{ initial|json_script:"initial-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

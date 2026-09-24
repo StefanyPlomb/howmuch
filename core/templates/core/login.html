@@ -1,0 +1,108 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Entrar · How Much{% endblock %}
+{% block body_class %}page-login{% endblock %}
+
+{% block content %}
+<main class="auth">
+
+  <!-- Painel visual com telemetria demonstrativa -->
+  <section class="auth-visual" aria-label="Demonstração de telemetria">
+    <div class="brand">
+      <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span class="brand-name">How<b>Much</b></span>
+    </div>
+
+    <div class="auth-hero">
+      <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-activity"/></svg> Telemetria de valores</p>
+      <h1>Saiba <em>quanto</em> cada decisão realmente custa.</h1>
+      <p class="lead">Acompanhe custos, consumo e cobranças de todas as suas fontes em um só painel, atualizado em tempo real.</p>
+    </div>
+
+    <div class="live-card" id="live-demo">
+      <header class="live-head">
+        <span class="live-tag"><i class="pulse"></i> Ao vivo · demonstração</span>
+        <span class="muted small" id="demo-clock">--:--:--</span>
+      </header>
+      <div class="live-main">
+        <div>
+          <div class="muted small">Valor monitorado</div>
+          <div class="live-value" id="demo-value">R$ 0,00</div>
+        </div>
+        <span class="chip up" id="demo-delta"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg><span>0,00%</span></span>
+      </div>
+      <svg class="spark" id="demo-spark" viewBox="0 0 320 70" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <ul class="mini-bars" id="demo-bars"></ul>
+      <p class="fine">Dados fictícios gerados no navegador, apenas para demonstração.</p>
+    </div>
+  </section>
+
+  <!-- Formulário -->
+  <section class="auth-panel">
+    <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Alternar tema claro/escuro">
+      <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+      <svg class="ico t-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+
+    <div class="auth-card">
+      <div class="brand brand-compact">
+        <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+        <span class="brand-name">How<b>Much</b></span>
+      </div>
+
+      <header>
+        <h2>Bem-vindo de volta</h2>
+        <p class="muted">Entre com suas credenciais para acessar o painel.</p>
+      </header>
+
+      <form method="post" novalidate class="form" id="login-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        {% if form.non_field_errors %}
+          <div class="alert" role="alert">
+            <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
+            <span>{{ form.non_field_errors.0 }}</span>
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+          <div class="input">
+            <svg class="ico" aria-hidden="true"><use href="#i-user"/></svg>
+            {{ form.username }}
+          </div>
+          {% for e in form.username.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+        </div>
+
+        <div class="field">
+          <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+          <div class="input">
+            <svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg>
+            {{ form.password }}
+            <button type="button" class="reveal" id="toggle-pass" aria-label="Mostrar senha" aria-pressed="false">
+              <svg class="ico e-on" aria-hidden="true"><use href="#i-eye"/></svg>
+              <svg class="ico e-off" aria-hidden="true"><use href="#i-eye-off"/></svg>
+            </button>
+          </div>
+          {% for e in form.password.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <span>Entrar</span>
+          <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+        </button>
+      </form>
+
+      <p class="secure"><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg> Conexão protegida · sessão criptografada</p>
+    </div>
+
+    <footer class="auth-foot muted small">© <span id="year"></span> How Much</footer>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/login.js' %}"></script>
+{% endblock %}

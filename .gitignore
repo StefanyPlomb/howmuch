@@ -1,0 +1,21 @@
+# segredos e ambiente
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# django
+staticfiles/
+*.sqlite3
+media/
+
+# editores / SO
+.vscode/
+.idea/
+.DS_Store
