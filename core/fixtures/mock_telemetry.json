@@ -1,0 +1,18 @@
+{
+  "_nota": "WIP — dados de exemplo (mock) para testes locais/seed, não usados em produção. Ainda não plugado a nenhuma fixture do Django.",
+  "total_monitorado": 128430.55,
+  "custo_hora": 214.7,
+  "leituras_por_minuto": 42,
+  "fontes_online": 6,
+  "alertas_ativos": 1,
+  "categorias": [
+    {"nome": "Infraestrutura", "participacao": 0.38},
+    {"nome": "APIs externas", "participacao": 0.27},
+    {"nome": "Armazenamento", "participacao": 0.19},
+    {"nome": "Outros", "participacao": 0.16}
+  ],
+  "leituras_recentes": [
+    {"fonte": "gateway-01", "tipo": "cpu", "valor": 12.4, "status": "ok"},
+    {"fonte": "gateway-02", "tipo": "rede", "valor": 3.1, "status": "atencao"}
+  ]
+}
