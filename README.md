@@ -25,10 +25,24 @@ por login, dashboard e a API de telemetria.
 
 Pré-requisito: Docker + Docker Compose.
 
+**Passo 1 (obrigatório, uma vez só):** garante que o `make` e o Docker existem
+na máquina — se o `make` faltar, o script instala na hora.
+
 ```bash
-cp .env.example .env        # ajuste os valores, principalmente as senhas
-docker compose up -d --build
+sh setup.sh
 ```
+
+**Passo 2:** sobe tudo.
+
+```bash
+make up                     # cria o .env se faltar, builda a imagem e sobe
+```
+
+Ajuste as senhas no `.env` (criado a partir do `.env.example`) e rode
+`make up` de novo se quiser mudar algo. Outros comandos: `make help`
+(`down`, `restart`, `logs`, `ps`, `clean`).
+
+Equivalente sem make: `cp .env.example .env && docker compose up -d --build`.
 
 Isso sobe dois serviços:
 
