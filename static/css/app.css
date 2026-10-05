@@ -372,6 +372,19 @@ a { color: var(--olive-strong); }
 .empty { padding: 14px 4px 2px; }
 input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 
+.flash { padding: 14px clamp(16px, 3vw, 32px) 0; max-width: 1280px; margin: 0 auto; }
+.msg { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13.5px; background: var(--olive-soft); color: var(--ok); }
+.msg.error { background: rgba(200,106,85,.12); color: var(--crit); }
+.dec-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; }
+.dec-form .wide { grid-column: 1 / -1; }
+.input select { flex: 1; height: 100%; background: transparent; border: 0; outline: 0; color: var(--text); min-width: 0; }
+.input select option { background: var(--surface); color: var(--text); }
+.dec-form .btn-primary { width: auto; justify-self: start; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; font-size: 12.5px; text-decoration: underline; }
+.link-btn:hover { color: var(--crit); }
+.inline { display: inline; margin: 0; }
+.status.open { color: var(--muted); }
+
 /* ============================================================
    PÁGINA PÚBLICA (home)
    ============================================================ */
@@ -436,6 +449,7 @@ a.mod:hover { border-color: var(--olive); transform: translateY(-2px); }
   .layers, .mods { grid-template-columns: 1fr; }
   .pub-links { display: none; }
   .sc-grid { grid-template-columns: 1fr; }
+  .dec-form { grid-template-columns: 1fr; }
 }
 @media (max-width: 1080px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -18,6 +18,7 @@ Plataforma de estudo inspirada em plataformas de análise de mercado de commodit
 - **Previsões:** histórico de 36 meses + projeção de 12 com faixa de incerteza.
 - **Cenários:** choque de preço, volume e hedge sobre a previsão; os cenários
   ficam salvos por usuário (fórmula em `core/scenarios.py`, recalculada no servidor).
+- **Decisões:** registra compras/vendas e compara o preço fechado com a média do mercado nos 3 meses seguintes (`core/decisions.py`); decisões recentes ficam "em aberto".
 - **Visão geral:** painel de custos, categorias e leituras.
 
 - Tudo é registrado **somente no Postgres**. As tabelas (`Categoria`, `Fonte`,
@@ -65,7 +66,7 @@ Isso sobe dois serviços:
 Acesso: **http://localhost:8011**
 
 - Página pública (apresentação da plataforma): `/` · Login: `/login/`
-- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` (exigem login)
+- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` · Decisões: `/app/decisoes/` (exigem login)
 - Admin do Django: `/admin/`
 - API da telemetria (autenticada): `/api/telemetria/`
 

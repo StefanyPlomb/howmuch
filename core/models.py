@@ -121,3 +121,28 @@ class Cenario(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Decisao(models.Model):
+    """Decisão tomada (compra/venda/espera) sobre um mês histórico, para comparar com o mercado depois."""
+
+    class Tipo(models.TextChoices):
+        COMPRA = "compra", "Compra"
+        VENDA = "venda", "Venda"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="decisoes")
+    commodity = models.ForeignKey(Commodity, on_delete=models.PROTECT, related_name="decisoes")
+    kind = models.CharField("tipo", max_length=10, choices=Tipo.choices)
+    month = models.DateField("mês da decisão")
+    volume = models.DecimalField("volume", max_digits=14, decimal_places=2)
+    price = models.DecimalField("preço fechado", max_digits=12, decimal_places=2)
+    note = models.CharField("justificativa", max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "decisão"
+        verbose_name_plural = "decisões"
+        ordering = ["-month", "-created_at"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} · {self.commodity} · {self.month:%m/%Y}"

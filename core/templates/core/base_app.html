@@ -13,6 +13,7 @@
       <a href="{% url 'dashboard' %}" {% if active == 'dashboard' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg> Visão geral</a>
       <a href="{% url 'forecasts' %}" {% if active == 'forecasts' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-trend"/></svg> Previsões</a>
       <a href="{% url 'scenarios' %}" {% if active == 'scenarios' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-flask"/></svg> Cenários</a>
+      <a href="{% url 'decisions' %}" {% if active == 'decisions' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Decisões</a>
     </nav>
     <p class="side-foot muted small">Plataforma de estudo · dados fictícios</p>
   </aside>
@@ -40,6 +41,7 @@
         </form>
       </div>
     </header>
+    {% if messages %}<div class="flash">{% for m in messages %}<p class="msg {{ m.tags }}" role="status">{{ m }}</p>{% endfor %}</div>{% endif %}
     {% block app_content %}{% endblock %}
   </div>
 </div>
