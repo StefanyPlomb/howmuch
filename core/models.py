@@ -146,3 +146,36 @@ class Decisao(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} · {self.commodity} · {self.month:%m/%Y}"
+
+
+class ImportacaoDados(models.Model):
+    """Registro de cada importação de preços via CSV (auditoria)."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="importacoes")
+    filename = models.CharField("arquivo", max_length=200)
+    created_rows = models.PositiveIntegerField("criadas", default=0)
+    updated_rows = models.PositiveIntegerField("atualizadas", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "importação de dados"
+        verbose_name_plural = "importações de dados"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.filename} · {self.created_at:%d/%m/%Y %H:%M}"
+
+
+class Meta(models.Model):
+    """Preço-alvo (teto de compra) de um usuário para uma commodity."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="metas")
+    commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE, related_name="metas")
+    target_price = models.DecimalField("preço-alvo", max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "meta"
+        constraints = [models.UniqueConstraint(fields=["user", "commodity"], name="meta_unica")]
+
+    def __str__(self):
+        return f"{self.commodity} ≤ {self.target_price}"

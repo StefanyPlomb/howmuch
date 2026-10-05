@@ -1,0 +1,73 @@
+{% extends "core/base_app.html" %}
+{% load static %}
+
+{% block title %}Comparativo · How Much{% endblock %}
+{% block crumb %}Comparativo{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Comparativo</h1>
+      <p class="muted">Cada commodity contra o mercado, contra a sua meta e contra as suas compras.</p>
+    </div>
+  </div>
+
+  <article class="card chart-card">
+    <header class="card-head">
+      <div><h2>Variação relativa (base 100)</h2><p class="muted small">Primeiro mês do histórico = 100 · tracejado = previsão</p></div>
+      <span class="legend" id="cmp-legend"></span>
+    </header>
+    <div class="chart tall" id="cchart" role="img" aria-label="Variação relativa dos preços das commodities"></div>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Mercado e metas</h2>
+      <p class="muted small">Meta = seu teto de compra (R$ por unidade). Deixe em branco e salve para remover.</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Commodity</th><th class="num">Último preço</th><th class="num">12 meses</th><th class="num">Média 12 m</th><th class="num">Previsão (média)</th><th>Meta (teto)</th><th>Situação</th></tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td><b>{{ r.commodity.name }}</b><br><span class="muted small">{{ r.commodity.unit }}</span></td>
+            <td class="num"><b>R$ {{ r.last|floatformat:"2g" }}</b></td>
+            <td class="num {% if r.year_delta < 0 %}down-txt{% else %}up-txt{% endif %}">{{ r.year_delta|floatformat:1 }}%</td>
+            <td class="num muted">R$ {{ r.avg12|floatformat:"2g" }}</td>
+            <td class="num">R$ {{ r.forecast_avg|floatformat:"2g" }}<br><span class="small {% if r.forecast_delta < 0 %}up-txt{% else %}down-txt{% endif %}">{{ r.forecast_delta|floatformat:1 }}% vs. hoje</span></td>
+            <td>
+              <form method="post" action="{% url 'meta_save' %}" class="meta-form">
+                {% csrf_token %}<input type="hidden" name="commodity" value="{{ r.commodity.slug }}">
+                <div class="input sm"><input name="target" type="number" min="0.01" step="0.01" value="{% if r.target %}{{ r.target|stringformat:'.2f' }}{% endif %}" placeholder="sem meta" aria-label="Meta de {{ r.commodity.name }}"></div>
+                <button class="link-btn" type="submit">salvar</button>
+              </form>
+            </td>
+            <td>{% if r.target %}{% if r.over_target %}<span class="status critico">{{ r.target_gap|floatformat:1 }}% acima</span>{% else %}<span class="status ok">Dentro da meta</span>{% endif %}{% else %}<span class="status open">Sem meta</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Suas compras vs. mercado</h2>
+      <p class="muted small">Preço médio (ponderado por volume) das suas decisões de compra contra o mercado nos mesmos meses</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Commodity</th><th class="num">Seu preço médio</th><th class="num">Mercado (mesmos meses)</th><th class="num">Diferença</th></tr></thead>
+        <tbody>
+          {% for r in rows %}{% if r.my_avg %}
+          <tr><td><b>{{ r.commodity.name }}</b></td><td class="num">R$ {{ r.my_avg|floatformat:"2g" }}</td><td class="num muted">R$ {{ r.market_avg|floatformat:"2g" }}</td>
+            <td class="num"><b class="{% if r.my_vs_market < 0 %}up-txt{% else %}down-txt{% endif %}">{{ r.my_vs_market|floatformat:1 }}%</b> <span class="muted small">{% if r.my_vs_market < 0 %}abaixo{% else %}acima{% endif %} do mercado</span></td></tr>
+          {% endif %}{% endfor %}
+        </tbody>
+      </table>
+      <p class="muted small empty">Aparecem aqui as commodities em que você registrou compras em <a href="{% url 'decisions' %}">Decisões</a>.</p>
+    </div>
+  </article>
+</div>
+{{ initial|json_script:"initial-data" }}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/comparativo.js' %}"></script>{% endblock %}

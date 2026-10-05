@@ -384,6 +384,12 @@ input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 .link-btn:hover { color: var(--crit); }
 .inline { display: inline; margin: 0; }
 .status.open { color: var(--muted); }
+.btn-fit { width: auto; justify-self: start; padding: 0 26px; }
+.meta-form { display: flex; align-items: center; gap: 10px; }
+.input.sm { height: 36px; width: 130px; padding: 0 10px; }
+.input[type] , .input input[type="file"] { font-size: 13.5px; }
+code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+.dash-title .btn-sm { display: inline-flex; align-items: center; }
 
 /* ============================================================
    PÁGINA PÚBLICA (home)

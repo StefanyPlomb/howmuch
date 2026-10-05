@@ -14,6 +14,8 @@
       <a href="{% url 'forecasts' %}" {% if active == 'forecasts' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-trend"/></svg> Previsões</a>
       <a href="{% url 'scenarios' %}" {% if active == 'scenarios' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-flask"/></svg> Cenários</a>
       <a href="{% url 'decisions' %}" {% if active == 'decisions' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Decisões</a>
+      <a href="{% url 'comparison' %}" {% if active == 'comparison' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-gauge"/></svg> Comparativo</a>
+      <a href="{% url 'data' %}" {% if active == 'data' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-database"/></svg> Dados</a>
     </nav>
     <p class="side-foot muted small">Plataforma de estudo · dados fictícios</p>
   </aside>

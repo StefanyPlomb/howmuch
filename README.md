@@ -19,6 +19,8 @@ Plataforma de estudo inspirada em plataformas de análise de mercado de commodit
 - **Cenários:** choque de preço, volume e hedge sobre a previsão; os cenários
   ficam salvos por usuário (fórmula em `core/scenarios.py`, recalculada no servidor).
 - **Decisões:** registra compras/vendas e compara o preço fechado com a média do mercado nos 3 meses seguintes (`core/decisions.py`); decisões recentes ficam "em aberto".
+- **Comparativo:** índice base 100 de todas as commodities, metas (teto de compra) por usuário e suas compras contra o mercado nos mesmos meses (`core/comparison.py`).
+- **Dados:** inventário das séries, exportação CSV e importação CSV (`commodity,mes,preco`) restrita a administradores, tudo-ou-nada e com registro de cada importação (`core/data_import.py`).
 - **Visão geral:** painel de custos, categorias e leituras.
 
 - Tudo é registrado **somente no Postgres**. As tabelas (`Categoria`, `Fonte`,
@@ -66,7 +68,7 @@ Isso sobe dois serviços:
 Acesso: **http://localhost:8011**
 
 - Página pública (apresentação da plataforma): `/` · Login: `/login/`
-- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` · Decisões: `/app/decisoes/` (exigem login)
+- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` · Decisões: `/app/decisoes/` · Comparativo: `/app/comparativo/` · Dados: `/app/dados/` (exigem login)
 - Admin do Django: `/admin/`
 - API da telemetria (autenticada): `/api/telemetria/`
 

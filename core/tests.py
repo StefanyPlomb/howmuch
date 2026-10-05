@@ -4,7 +4,9 @@ from django.urls import reverse
 
 import json
 
-from .models import Categoria, Cenario, Commodity, Decisao, Fonte, Leitura, PontoSerie, PrecoMensal
+from decimal import Decimal
+
+from .models import Categoria, Cenario, Commodity, Decisao, Fonte, ImportacaoDados, Leitura, Meta, PontoSerie, PrecoMensal
 
 
 class SeedDataTests(TestCase):
@@ -112,3 +114,68 @@ class DecisoesTests(TestCase):
         self.client.force_login(outro)
         self.assertEqual(self.client.get(reverse("decisions")).status_code, 200)
         self.assertEqual(self.client.post(reverse("decision_delete", args=[Decisao.objects.get().pk])).status_code, 404)
+
+
+class DadosTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user("a", password="x-12345-y", is_staff=True)
+        self.user = get_user_model().objects.create_user("u", password="x-12345-y")
+
+    def _upload(self, text, user=None):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.client.force_login(user or self.admin)
+        return self.client.post(reverse("data_import"), {"file": SimpleUploadedFile("p.csv", text.encode())})
+
+    def test_importa_novo_atualiza_e_converte_previsao(self):
+        self._upload("commodity,mes,preco\nsoja,2026-02,131.40\nsoja,2023-02,100,5\n".replace("100,5", "100.50"))
+        soja = Commodity.objects.get(slug="soja")
+        fev26 = PrecoMensal.objects.get(commodity=soja, month="2026-02-01")
+        self.assertFalse(fev26.is_forecast)
+        self.assertIsNone(fev26.low)
+        self.assertEqual(PrecoMensal.objects.get(commodity=soja, month="2023-02-01").value, Decimal("100.50"))
+
+    def test_erro_cancela_tudo(self):
+        antes = PrecoMensal.objects.count()
+        self._upload("commodity,mes,preco\nsoja,2026-02,131.40\nxxx,2026-02,1\n")
+        self.assertEqual(PrecoMensal.objects.filter(is_forecast=False).count(), 36 * 4)
+        self.assertEqual(PrecoMensal.objects.count(), antes)
+        self.assertEqual(ImportacaoDados.objects.count(), 0)
+
+    def test_nao_deixa_commodity_sem_previsao(self):
+        linhas = "\n".join(f"soja,2026-{m:02d},100" for m in range(2, 13)) + "\nsoja,2027-01,100"
+        self._upload("commodity,mes,preco\n" + linhas)
+        self.assertEqual(Commodity.objects.get(slug="soja").precos.filter(is_forecast=True).count(), 12)
+
+    def test_usuario_comum_nao_importa(self):
+        self.assertEqual(self._upload("commodity,mes,preco\nsoja,2026-02,1\n", self.user).status_code, 403)
+
+    def test_exportar_e_modelo(self):
+        self.client.force_login(self.user)
+        body = self.client.get(reverse("data_export")).content.decode("utf-8-sig")
+        self.assertTrue(body.startswith("commodity,mes,preco"))
+        self.assertEqual(self.client.get(reverse("data_template")).status_code, 200)
+
+
+class ComparativoTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("u", password="x-12345-y")
+        self.client.force_login(self.user)
+
+    def test_meta_salva_atualiza_e_remove(self):
+        self.client.post(reverse("meta_save"), {"commodity": "soja", "target": "120,50"})
+        self.assertEqual(Meta.objects.get().target_price, Decimal("120.50"))
+        self.client.post(reverse("meta_save"), {"commodity": "soja", "target": "99"})
+        self.assertEqual(Meta.objects.get().target_price, Decimal("99.00"))
+        self.client.post(reverse("meta_save"), {"commodity": "soja", "target": ""})
+        self.assertEqual(Meta.objects.count(), 0)
+        self.client.post(reverse("meta_save"), {"commodity": "soja", "target": "abc"})
+        self.assertEqual(Meta.objects.count(), 0)
+
+    def test_pagina_com_meta_e_compra(self):
+        self.client.post(reverse("meta_save"), {"commodity": "soja", "target": "1"})
+        self.client.post(reverse("decision_save"), {"commodity": "soja", "kind": "compra", "month": "2023-02-01", "volume": "10", "price": "1"})
+        r = self.client.get(reverse("comparison"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "acima")
+        self.assertContains(r, "abaixo do mercado")

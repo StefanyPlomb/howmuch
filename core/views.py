@@ -1,18 +1,21 @@
+import csv
 import json
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db.models import Avg
-from django.http import Http404, JsonResponse
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
+from . import comparison, data_import
 from .decisions import evaluate
 from .forms import DecisaoForm, LoginForm
-from .models import Cenario, Commodity, Decisao, PrecoMensal
+from .models import Cenario, Commodity, Decisao, ImportacaoDados, Meta, PrecoMensal
 from .scenarios import simulate
 from .telemetry import snapshot
 
@@ -174,3 +177,100 @@ def decision_save(request):
 def decision_delete(request, pk):
     get_object_or_404(Decisao, pk=pk, user=request.user).delete()
     return redirect("decisions")
+
+
+# ---------------------------------------------------------------- Dados
+@login_required
+def data_page(request):
+    inventory = []
+    for c in Commodity.objects.all():
+        hist = c.precos.filter(is_forecast=False)
+        fc = c.precos.filter(is_forecast=True)
+        inventory.append({
+            "c": c, "hist": hist.count(), "fc": fc.count(),
+            "first": hist.first().month if hist.exists() else None,
+            "last": hist.last().month if hist.exists() else None,
+        })
+    return render(request, "core/data.html", {
+        "active": "data",
+        "inventory": inventory,
+        "imports": ImportacaoDados.objects.select_related("user")[:10],
+        "can_import": request.user.is_staff,
+    })
+
+
+@login_required
+@require_POST
+def data_import_view(request):
+    if not request.user.is_staff:
+        raise PermissionDenied
+    f = request.FILES.get("file")
+    if not f:
+        messages.error(request, "Escolha um arquivo CSV.")
+        return redirect("data")
+    try:
+        parsed = data_import.parse(f.read(data_import.MAX_BYTES + 1))
+        imp = data_import.apply(parsed, request.user, f.name)
+    except data_import.ImportError_ as e:
+        messages.error(request, "Importação cancelada — " + " · ".join(e.errors))
+        return redirect("data")
+    messages.success(request, f"Importado: {imp.created_rows} novos e {imp.updated_rows} atualizados.")
+    return redirect("data")
+
+
+def _csv_response(name):
+    resp = HttpResponse(content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="{name}"'
+    resp.write("\ufeff")
+    return resp
+
+
+@login_required
+def data_export(request):
+    resp = _csv_response("howmuch_precos.csv")
+    w = csv.writer(resp)
+    w.writerow(["commodity", "mes", "preco", "tipo", "minimo", "maximo"])
+    for p in PrecoMensal.objects.select_related("commodity"):
+        w.writerow([p.commodity.slug, p.month.strftime("%Y-%m"), p.value,
+                    "previsao" if p.is_forecast else "historico", p.low or "", p.high or ""])
+    return resp
+
+
+@login_required
+def data_template(request):
+    resp = _csv_response("modelo_importacao.csv")
+    w = csv.writer(resp)
+    w.writerow(data_import.HEADER)
+    w.writerow(["soja", "2026-02", "131.40"])
+    return resp
+
+
+# ---------------------------------------------------------- Comparativo
+@login_required
+def comparison_page(request):
+    rows = comparison.build(request.user)
+    return render(request, "core/comparison.html", {
+        "active": "comparison", "rows": rows, "initial": {"series": comparison.index_series()},
+    })
+
+
+@login_required
+@require_POST
+def meta_save(request):
+    commodity = get_object_or_404(Commodity, slug=request.POST.get("commodity", ""))
+    raw = request.POST.get("target", "").strip().replace(",", ".")
+    if not raw:
+        Meta.objects.filter(user=request.user, commodity=commodity).delete()
+        messages.success(request, f"Meta de {commodity.name} removida.")
+        return redirect("comparison")
+    try:
+        target = Decimal(raw)
+        if not (Decimal("0.01") <= target <= Decimal("9999999")):
+            raise InvalidOperation
+        target = target.quantize(Decimal("0.01"))
+    except InvalidOperation:
+        messages.error(request, "Preço-alvo inválido.")
+        return redirect("comparison")
+    Meta.objects.update_or_create(user=request.user, commodity=commodity, defaults={"target_price": target})
+    messages.success(request, f"Meta de {commodity.name} salva.")
+    return redirect("comparison")
