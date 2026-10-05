@@ -12,8 +12,11 @@ por login, dashboard e a API de telemetria.
 
 ## Ideia
 
-- `core/telemetry.py` gera os números fictícios exibidos no painel — não há
-  integração com fontes reais, é só para demonstração visual.
+- Tudo é registrado **somente no Postgres**. As tabelas (`Categoria`, `Fonte`,
+  `PontoSerie`, `Leitura`) e os dados iniciais fictícios vêm das *migrations*
+  versionadas (`core/migrations/`), então `make up` sempre entrega o banco já
+  com registros, igual para todos — nunca um banco vazio. `core/telemetry.py`
+  só lê o banco. Para criar/alterar dados compartilhados, crie uma migration.
 - Tudo fica atrás de login (`django.contrib.auth`); existe um comando
   `manage.py bootstrap` idempotente que cria o superusuário a partir das
   variáveis `ADMIN_*` do `.env`.
@@ -47,9 +50,9 @@ Equivalente sem make: `cp .env.example .env && docker compose up -d --build`.
 Isso sobe dois serviços:
 
 - `db` — Postgres 16, exposto em `127.0.0.1:${DB_PORT}` (padrão 5433).
-- `web` — Django, exposto em `127.0.0.1:${WEB_PORT}` (padrão 8011). No
-  startup ele roda `migrate`, `bootstrap` (cria/atualiza o superusuário) e
-  sobe o `runserver`.
+- `web` — container separado com o site (login + tela inicial), Django +
+  gunicorn, exposto em `127.0.0.1:${WEB_PORT}` (padrão 8011). No startup ele
+  roda `migrate` (schema + dados), `bootstrap` (superusuário) e sobe o gunicorn.
 
 Acesso: **http://localhost:8011**
 
@@ -73,10 +76,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ```
 config/     settings, urls e wsgi do projeto Django
-core/       app único: models, views, forms, telemetria fictícia e templates
+core/       app único: models, migrations (schema + dados), views, forms e templates
 static/     css/js/img servidos via staticfiles
 Dockerfile, docker-compose.yml    imagem da app + Postgres
 ```
 
-> ⚠️ Projeto de estudo/demo. `DJANGO_DEBUG=1` e o `runserver` do Django não
-> são adequados para produção.
+> ⚠️ Projeto de estudo/demo: troque as senhas do `.env` e use `DJANGO_DEBUG=0`
+> fora do ambiente local.
