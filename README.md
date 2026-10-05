@@ -10,12 +10,28 @@ framework (JS puro).
 Stack: **Django 5** + **PostgreSQL 16**, com um app único (`core`) responsável
 por login, dashboard e a API de telemetria.
 
+## Papéis: administrador e cliente
+
+- **Administrador** (`is_staff`; o superusuário do `.env` já é): cadastra tudo.
+  Em **Administração** cria clientes, libera commodities por cliente, cria/remove
+  usuários e redefine senhas, e cria commodities (os preços entram em **Dados**).
+  Com **“Ver como”** (topo da página) escolhe um cliente e registra as **decisões**
+  e **metas** dele. Só o administrador acessa **Dados** (importar/exportar CSV).
+- **Cliente** (usuário com `Perfil` ligado a um `Cliente`): **só visualiza** —
+  Previsões, Comparativo, Decisões e Visão geral — e pode **simular** em Cenários
+  (os cenários salvos ficam com o cliente). Vê apenas as commodities liberadas
+  para ele e apenas as decisões/metas dele.
+- Os dois clientes de demonstração (*Cooperativa Horizonte* e *Frigorífico Aurora*)
+  vêm das migrations com commodities, metas e decisões; **os usuários deles não**
+  (senha não vai para o repositório): crie em Administração → cliente → Usuários.
+- A Visão geral (telemetria de custos) continua compartilhada por todos.
+
 ## Ideia
 
 Plataforma de estudo inspirada em plataformas de análise de mercado de commodities
 (previsão → cenários → governança), com identidade visual própria:
 
-- **Previsões:** histórico de 36 meses + projeção de 12 com faixa de incerteza.
+- **Previsões:** (por cliente) histórico de 36 meses + projeção de 12 com faixa de incerteza.
 - **Cenários:** choque de preço, volume e hedge sobre a previsão; os cenários
   ficam salvos por usuário (fórmula em `core/scenarios.py`, recalculada no servidor).
 - **Decisões:** registra compras/vendas e compara o preço fechado com a média do mercado nos 3 meses seguintes (`core/decisions.py`); decisões recentes ficam "em aberto".

@@ -56,7 +56,7 @@
   </section>
 
   <article class="card">
-    <header class="card-head"><div><h2>Seus cenários salvos</h2><p class="muted small">Ficam gravados no banco, por usuário</p></div></header>
+    <header class="card-head"><div><h2>Seus cenários salvos</h2><p class="muted small">Ficam gravados no banco{% if cliente_atual %}, para {{ cliente_atual.name }}{% endif %}</p></div></header>
     <div class="table-wrap">
       <table class="table">
         <thead><tr><th>Nome</th><th>Commodity</th><th class="num">Choque</th><th class="num">Hedge</th><th class="num">Custo base</th><th class="num">Cenário</th><th class="num">Impacto</th></tr></thead>

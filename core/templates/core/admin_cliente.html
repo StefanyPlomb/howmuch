@@ -1,0 +1,60 @@
+{% extends "core/base_app.html" %}
+
+{% block title %}{{ cl.name }} · Administração{% endblock %}
+{% block crumb %}Administração › {{ cl.name }}{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title"><div><h1>{{ cl.name }}</h1>
+    <p class="muted"><a href="{% url 'admin_home' %}">← Todos os clientes</a></p></div></div>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Dados do cliente e commodities liberadas</h2><p class="muted small">O cliente só enxerga as commodities marcadas.</p></div></header>
+    <form method="post" action="{% url 'cliente_update' cl.pk %}" class="form">
+      {% csrf_token %}
+      <div class="field"><label for="c-name">Nome</label><div class="input"><input id="c-name" name="name" maxlength="80" required value="{{ cl.name }}"></div></div>
+      <label class="check"><input type="checkbox" name="active" {% if cl.active %}checked{% endif %}> Cliente ativo (inativos perdem o acesso ao conteúdo)</label>
+      <fieldset class="checks"><legend class="small muted">Commodities</legend>
+        {% for m in all_commodities %}
+        <label class="check"><input type="checkbox" name="commodities" value="{{ m.pk }}" {% if m.pk in liberadas %}checked{% endif %}> {{ m.name }} <span class="muted small">({{ m.unit }})</span></label>
+        {% endfor %}
+      </fieldset>
+      <button type="submit" class="btn btn-primary btn-fit"><span>Salvar</span></button>
+    </form>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Usuários do cliente</h2><p class="muted small">Acesso somente para visualizar e simular cenários.</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Usuário</th><th>Último acesso</th><th>Nova senha</th><th></th></tr></thead>
+        <tbody>
+          {% for p in usuarios %}
+          <tr><td><b>{{ p.user.username }}</b></td><td class="muted">{{ p.user.last_login|date:"d/m/Y H:i"|default:"nunca" }}</td>
+            <td><form method="post" action="{% url 'usuario_password' cl.pk p.user.pk %}" class="meta-form">{% csrf_token %}
+              <div class="input sm"><input type="password" name="password" autocomplete="new-password" placeholder="nova senha" aria-label="Nova senha de {{ p.user.username }}"></div>
+              <button class="link-btn" type="submit">redefinir</button></form></td>
+            <td><form method="post" action="{% url 'usuario_delete' cl.pk p.user.pk %}" class="inline">{% csrf_token %}<button class="link-btn" type="submit">remover</button></form></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not usuarios %}<p class="muted small empty">Nenhum usuário ainda.</p>{% endif %}
+    </div>
+    <form method="post" action="{% url 'usuario_create' cl.pk %}" class="inline-form">
+      {% csrf_token %}
+      <div class="input"><input name="username" maxlength="150" required autocomplete="off" placeholder="Usuário" aria-label="Usuário"></div>
+      <div class="input"><input type="password" name="password" required autocomplete="new-password" placeholder="Senha (mín. 8 caracteres)" aria-label="Senha"></div>
+      <button type="submit" class="btn btn-primary btn-fit"><span>Criar usuário</span></button>
+    </form>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Excluir cliente</h2><p class="muted small">Apaga também usuários, decisões, metas e cenários dele. Não tem volta.</p></div></header>
+    <form method="post" action="{% url 'cliente_delete' cl.pk %}" class="inline-form">
+      {% csrf_token %}
+      <div class="input"><input name="confirm" autocomplete="off" placeholder="Digite: {{ cl.name }}" aria-label="Confirmação"></div>
+      <button type="submit" class="btn btn-danger btn-fit"><span>Excluir</span></button>
+    </form>
+  </article>
+</div>
+{% endblock %}

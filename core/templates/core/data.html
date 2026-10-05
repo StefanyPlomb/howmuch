@@ -30,19 +30,15 @@
 
   <article class="card">
     <header class="card-head"><div><h2>Importar preços</h2>
-      <p class="muted small">CSV com <code>commodity,mes,preco</code> (ex.: <code>soja,2026-02,131.40</code>) · tudo ou nada · máx. 1 MB</p></div>
+      <p class="muted small">CSV com <code>commodity,mes,preco</code> (ex.: <code>soja,2026-02,131.40</code>) ou o formato completo da exportação (<code>…,tipo,minimo,maximo</code>) · tudo ou nada · máx. 1 MB</p></div>
       <a class="btn btn-sm" href="{% url 'data_template' %}">Baixar modelo</a></header>
-    {% if can_import %}
     <form method="post" action="{% url 'data_import' %}" enctype="multipart/form-data" class="form">
       {% csrf_token %}
       <div class="field"><label for="d-file">Arquivo CSV</label>
         <div class="input"><input id="d-file" type="file" name="file" accept=".csv,text/csv" required></div></div>
-      <p class="muted small">Um mês que era previsão passa a ser histórico (a faixa é descartada). Cada importação fica registrada abaixo.</p>
+      <p class="muted small">No formato curto, um mês que era previsão passa a ser histórico (a faixa é descartada). Para cadastrar previsões, use o formato completo. Cada commodity precisa ficar com ≥2 meses de histórico e ≥1 de previsão. Cada importação fica registrada abaixo.</p>
       <button type="submit" class="btn btn-primary btn-fit"><span>Importar</span></button>
     </form>
-    {% else %}
-    <p class="muted small">A importação é restrita a administradores.</p>
-    {% endif %}
   </article>
 
   <article class="card">

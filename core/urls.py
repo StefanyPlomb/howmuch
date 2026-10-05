@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views
+from . import admin_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -20,5 +20,15 @@ urlpatterns = [
     path("app/dados/modelo.csv", views.data_template, name="data_template"),
     path("app/comparativo/", views.comparison_page, name="comparison"),
     path("app/comparativo/meta/", views.meta_save, name="meta_save"),
+    path("app/cliente-ativo/", views.set_cliente_ativo, name="cliente_ativo"),
+    path("app/admin/", admin_views.admin_home, name="admin_home"),
+    path("app/admin/clientes/novo/", admin_views.cliente_create, name="cliente_create"),
+    path("app/admin/clientes/<int:pk>/", admin_views.cliente_detail, name="admin_cliente"),
+    path("app/admin/clientes/<int:pk>/salvar/", admin_views.cliente_update, name="cliente_update"),
+    path("app/admin/clientes/<int:pk>/excluir/", admin_views.cliente_delete, name="cliente_delete"),
+    path("app/admin/clientes/<int:pk>/usuarios/novo/", admin_views.usuario_create, name="usuario_create"),
+    path("app/admin/clientes/<int:pk>/usuarios/<int:user_pk>/senha/", admin_views.usuario_password, name="usuario_password"),
+    path("app/admin/clientes/<int:pk>/usuarios/<int:user_pk>/excluir/", admin_views.usuario_delete, name="usuario_delete"),
+    path("app/admin/commodities/nova/", admin_views.commodity_create, name="commodity_create"),
     path("api/telemetria/", views.telemetry_api, name="telemetry"),
 ]

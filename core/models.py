@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Count, Q
 
 
 class Categoria(models.Model):
@@ -63,7 +64,18 @@ class Leitura(models.Model):
         return f"{self.code} · {self.source}"
 
 
+class CommodityQuerySet(models.QuerySet):
+    def ready(self):
+        """Só commodities com série utilizável: ≥2 meses de histórico e ≥1 de previsão."""
+        return self.annotate(
+            n_hist=Count("precos", filter=Q(precos__is_forecast=False), distinct=True),
+            n_fc=Count("precos", filter=Q(precos__is_forecast=True), distinct=True),
+        ).filter(n_hist__gte=2, n_fc__gte=1)
+
+
 class Commodity(models.Model):
+    objects = CommodityQuerySet.as_manager()
+
     slug = models.SlugField(unique=True)
     name = models.CharField("nome", max_length=60)
     unit = models.CharField("unidade", max_length=30)
@@ -102,6 +114,7 @@ class Cenario(models.Model):
     """Simulação salva: choque de preço + volume + % protegido (hedge)."""
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cenarios")
+    cliente = models.ForeignKey("Cliente", on_delete=models.CASCADE, null=True, blank=True, related_name="cenarios")
     commodity = models.ForeignKey(Commodity, on_delete=models.PROTECT, related_name="cenarios")
     name = models.CharField("nome", max_length=80)
     price_shock = models.DecimalField("choque de preço (%)", max_digits=5, decimal_places=1)
@@ -124,13 +137,14 @@ class Cenario(models.Model):
 
 
 class Decisao(models.Model):
-    """Decisão tomada (compra/venda/espera) sobre um mês histórico, para comparar com o mercado depois."""
+    """Decisão registrada pelo administrador para um cliente, comparada com o mercado depois."""
 
     class Tipo(models.TextChoices):
         COMPRA = "compra", "Compra"
         VENDA = "venda", "Venda"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="decisoes")
+    cliente = models.ForeignKey("Cliente", on_delete=models.CASCADE, related_name="decisoes")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     commodity = models.ForeignKey(Commodity, on_delete=models.PROTECT, related_name="decisoes")
     kind = models.CharField("tipo", max_length=10, choices=Tipo.choices)
     month = models.DateField("mês da decisão")
@@ -167,15 +181,44 @@ class ImportacaoDados(models.Model):
 
 
 class Meta(models.Model):
-    """Preço-alvo (teto de compra) de um usuário para uma commodity."""
+    """Preço-alvo (teto de compra) de um cliente para uma commodity (definido pelo administrador)."""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="metas")
+    cliente = models.ForeignKey("Cliente", on_delete=models.CASCADE, related_name="metas")
     commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE, related_name="metas")
     target_price = models.DecimalField("preço-alvo", max_digits=12, decimal_places=2)
 
     class Meta:
         verbose_name = "meta"
-        constraints = [models.UniqueConstraint(fields=["user", "commodity"], name="meta_unica")]
+        constraints = [models.UniqueConstraint(fields=["cliente", "commodity"], name="meta_unica")]
 
     def __str__(self):
         return f"{self.commodity} ≤ {self.target_price}"
+
+
+class Cliente(models.Model):
+    """Empresa atendida. O administrador libera commodities e registra decisões/metas por cliente."""
+
+    name = models.CharField("nome", max_length=80, unique=True)
+    active = models.BooleanField("ativo", default=True)
+    commodities = models.ManyToManyField(Commodity, blank=True, related_name="clientes", verbose_name="commodities liberadas")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "cliente"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Perfil(models.Model):
+    """Vincula um usuário (não administrador) ao seu cliente."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil")
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="usuarios")
+
+    class Meta:
+        verbose_name_plural = "perfis"
+
+    def __str__(self):
+        return f"{self.user} @ {self.cliente}"

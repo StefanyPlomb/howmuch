@@ -15,7 +15,10 @@
       <a href="{% url 'scenarios' %}" {% if active == 'scenarios' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-flask"/></svg> Cenários</a>
       <a href="{% url 'decisions' %}" {% if active == 'decisions' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Decisões</a>
       <a href="{% url 'comparison' %}" {% if active == 'comparison' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-gauge"/></svg> Comparativo</a>
+      {% if is_admin %}
       <a href="{% url 'data' %}" {% if active == 'data' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-database"/></svg> Dados</a>
+      <a href="{% url 'admin_home' %}" {% if active == 'admin' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg> Administração</a>
+      {% endif %}
     </nav>
     <p class="side-foot muted small">Plataforma de estudo · dados fictícios</p>
   </aside>
@@ -23,6 +26,19 @@
   <div class="main">
     <header class="topbar">
       <span class="muted small topbar-title">{% block crumb %}Plataforma{% endblock %}</span>
+      {% if is_admin %}
+      <form method="post" action="{% url 'cliente_ativo' %}" class="as-client">
+        {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+        <label for="as-client" class="muted small">Ver como</label>
+        <div class="input sm"><select id="as-client" name="cliente" onchange="this.form.submit()">
+          <option value="">Todos (administrador)</option>
+          {% for c in clientes_all %}<option value="{{ c.pk }}" {% if cliente_atual and cliente_atual.pk == c.pk %}selected{% endif %}>{{ c.name }}{% if not c.active %} (inativo){% endif %}</option>{% endfor %}
+        </select></div>
+        <noscript><button class="link-btn" type="submit">aplicar</button></noscript>
+      </form>
+      {% elif cliente_atual %}
+      <span class="chip">{{ cliente_atual.name }}</span>
+      {% endif %}
       <div class="topbar-right">
         <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
           <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
@@ -32,7 +48,7 @@
           <span class="avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</span>
           <span class="user-meta">
             <strong>{{ request.user.get_username }}</strong>
-            <small class="muted">{% if request.user.is_superuser %}Administrador{% else %}Usuário{% endif %}</small>
+            <small class="muted">{% if is_admin %}Administrador{% else %}Cliente{% endif %}</small>
           </span>
         </div>
         <form method="post" action="{% url 'logout' %}">

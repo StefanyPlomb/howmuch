@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.db.models import Avg
 
-from .models import Commodity, Decisao, Meta, PrecoMensal
+from .models import Decisao, Meta
 
 
 def _wavg(pairs):
@@ -12,10 +12,10 @@ def _wavg(pairs):
     return sum(p * v for p, v in pairs) / vol if vol else None
 
 
-def build(user):
-    metas = {m.commodity_id: m.target_price for m in Meta.objects.filter(user=user)}
+def build(cliente, commodities):
+    metas = {m.commodity_id: m.target_price for m in Meta.objects.filter(cliente=cliente)} if cliente else {}
     rows = []
-    for c in Commodity.objects.all():
+    for c in commodities:
         hist = list(c.precos.filter(is_forecast=False).order_by("month"))
         last = hist[-1].value
         year_ago = hist[-13].value if len(hist) > 12 else hist[0].value
@@ -25,7 +25,7 @@ def build(user):
 
         # benchmark do usuário: preço médio das compras vs. mercado nos mesmos meses
         market = {p.month: p.value for p in hist}
-        compras = [d for d in Decisao.objects.filter(user=user, commodity=c, kind=Decisao.Tipo.COMPRA) if d.month in market]
+        compras = [d for d in Decisao.objects.filter(cliente=cliente, commodity=c, kind=Decisao.Tipo.COMPRA) if d.month in market] if cliente else []
         mine = _wavg([(d.price, d.volume) for d in compras])
         mkt = _wavg([(market[d.month], d.volume) for d in compras])
 
@@ -46,10 +46,10 @@ def build(user):
     return rows
 
 
-def index_series():
+def index_series(commodities):
     """Série base 100 (primeiro mês) de cada commodity, para comparar variações."""
     out = []
-    for c in Commodity.objects.all():
+    for c in commodities:
         pts = list(c.precos.all())
         base = float(pts[0].value)
         out.append({

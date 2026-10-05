@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Categoria, Cenario, Decisao, ImportacaoDados, Meta, Commodity, Fonte, Leitura, PontoSerie, PrecoMensal
+from .models import Categoria, Cenario, Cliente, Decisao, Perfil, ImportacaoDados, Meta, Commodity, Fonte, Leitura, PontoSerie, PrecoMensal
 
 admin.site.register(Categoria)
 admin.site.register(Fonte)
@@ -22,3 +22,5 @@ class PrecoMensalAdmin(admin.ModelAdmin):
 admin.site.register(Decisao)
 admin.site.register(ImportacaoDados)
 admin.site.register(Meta)
+admin.site.register(Cliente)
+admin.site.register(Perfil)

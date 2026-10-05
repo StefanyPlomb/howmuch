@@ -1,0 +1,57 @@
+{% extends "core/base_app.html" %}
+
+{% block title %}Administração · How Much{% endblock %}
+{% block crumb %}Administração{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title"><div><h1>Administração</h1>
+    <p class="muted">Cadastre clientes, libere commodities e crie os acessos. O cliente só visualiza e simula.</p></div></div>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Clientes</h2><p class="muted small">Use “Ver como” no topo para registrar decisões e metas de um cliente</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Cliente</th><th>Situação</th><th>Commodities liberadas</th><th class="num">Usuários</th><th></th></tr></thead>
+        <tbody>
+          {% for c in clientes %}
+          <tr><td><b>{{ c.name }}</b></td>
+            <td>{% if c.active %}<span class="status ok">Ativo</span>{% else %}<span class="status open">Inativo</span>{% endif %}</td>
+            <td>{% for m in c.commodities.all %}{{ m.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">nenhuma</span>{% endfor %}</td>
+            <td class="num">{{ c.usuarios.count }}</td>
+            <td class="num"><a href="{% url 'admin_cliente' c.pk %}">gerenciar</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not clientes %}<p class="muted small empty">Nenhum cliente cadastrado.</p>{% endif %}
+    </div>
+    <form method="post" action="{% url 'cliente_create' %}" class="inline-form">
+      {% csrf_token %}
+      <div class="input"><input name="name" maxlength="80" required placeholder="Nome do novo cliente" aria-label="Nome do novo cliente"></div>
+      <button type="submit" class="btn btn-primary btn-fit"><span>Criar cliente</span></button>
+    </form>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Commodities</h2><p class="muted small">Catálogo global. Uma commodity só aparece para os clientes depois de ter preços importados em <a href="{% url 'data' %}">Dados</a>.</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Nome</th><th>Slug</th><th>Unidade</th><th class="num">Histórico</th><th class="num">Previsão</th><th>Situação</th></tr></thead>
+        <tbody>
+          {% for m in commodities %}
+          <tr><td><b>{{ m.name }}</b></td><td class="muted">{{ m.slug }}</td><td>{{ m.unit }}</td><td class="num">{{ m.n_hist }}</td><td class="num">{{ m.n_fc }}</td>
+            <td>{% if m.n_hist >= 2 and m.n_fc >= 1 %}<span class="status ok">Pronta</span>{% else %}<span class="status atencao">Sem série completa</span>{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form method="post" action="{% url 'commodity_create' %}" class="inline-form">
+      {% csrf_token %}
+      <div class="input"><input name="name" maxlength="60" required placeholder="Nome (ex.: Trigo)" aria-label="Nome"></div>
+      <div class="input"><input name="unit" maxlength="30" required placeholder="Unidade (ex.: tonelada)" aria-label="Unidade"></div>
+      <div class="input"><input name="description" maxlength="200" placeholder="Descrição (opcional)" aria-label="Descrição"></div>
+      <button type="submit" class="btn btn-primary btn-fit"><span>Criar commodity</span></button>
+    </form>
+  </article>
+</div>
+{% endblock %}

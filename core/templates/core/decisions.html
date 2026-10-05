@@ -8,7 +8,7 @@
   <div class="dash-title">
     <div>
       <h1>Decisões</h1>
-      <p class="muted">Registre o que foi decidido e compare com o mercado nos 3 meses seguintes.</p>
+      <p class="muted">{% if can_edit %}Registre as decisões do cliente <b>{{ cliente_atual.name }}</b> e compare com o mercado nos 3 meses seguintes.{% else %}Decisões registradas pela consultoria para {{ cliente_atual.name }}, comparadas com o mercado nos 3 meses seguintes.{% endif %}</p>
     </div>
   </div>
 
@@ -23,6 +23,7 @@
     <article class="card kpi"><div class="kpi-head"><span>Em aberto</span></div><div class="kpi-value">{{ open_count }}</div><span class="muted small">aguardando mercado</span></article>
   </section>
 
+  {% if can_edit %}
   <article class="card">
     <header class="card-head"><div><h2>Nova decisão</h2><p class="muted small">Se o preço ficar em branco, usa o preço de mercado do mês escolhido.</p></div></header>
     <form method="post" action="{% url 'decision_save' %}" class="form dec-form">
@@ -42,12 +43,13 @@
       <button type="submit" class="btn btn-primary"><span>Registrar decisão</span></button>
     </form>
   </article>
+  {% endif %}
 
   <article class="card">
     <header class="card-head"><div><h2>Histórico de decisões</h2><p class="muted small">Ganho positivo = decisão melhor que a média do mercado depois</p></div></header>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Mês</th><th>Commodity</th><th>Tipo</th><th class="num">Volume</th><th class="num">Preço fechado</th><th class="num">Mercado (3 m)</th><th class="num">Resultado</th><th>Nota</th><th></th></tr></thead>
+        <thead><tr><th>Mês</th><th>Commodity</th><th>Tipo</th><th class="num">Volume</th><th class="num">Preço fechado</th><th class="num">Mercado (3 m)</th><th class="num">Resultado</th><th>Nota</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
         <tbody>
           {% for r in rows %}
           <tr>
@@ -56,7 +58,7 @@
             <td class="num muted">{% if r.ref %}R$ {{ r.ref|floatformat:"2g" }}{% else %}—{% endif %}</td>
             <td class="num">{% if r.gain is None %}<span class="status open">Em aberto</span>{% else %}<b class="{% if r.gain > 0 %}up-txt{% elif r.gain < 0 %}down-txt{% endif %}">R$ {{ r.gain|floatformat:"2g" }}</b>{% endif %}</td>
             <td class="muted">{{ r.d.note|default:"—" }}</td>
-            <td><form method="post" action="{% url 'decision_delete' r.d.pk %}" class="inline">{% csrf_token %}<button class="link-btn" type="submit" aria-label="Excluir decisão">excluir</button></form></td>
+            {% if can_edit %}<td><form method="post" action="{% url 'decision_delete' r.d.pk %}" class="inline">{% csrf_token %}<button class="link-btn" type="submit" aria-label="Excluir decisão">excluir</button></form></td>{% endif %}
           </tr>
           {% endfor %}
         </tbody>

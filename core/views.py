@@ -4,18 +4,18 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.db.models import Avg
-from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib import messages
+from django.db.models import Avg
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from . import comparison, data_import
+from .access import SESSION_KEY, admin_required, current_cliente, render_empty, visible_commodities
 from .decisions import evaluate
 from .forms import DecisaoForm, LoginForm
-from .models import Cenario, Commodity, Decisao, ImportacaoDados, Meta, PrecoMensal
+from .models import Cenario, Cliente, Commodity, Decisao, ImportacaoDados, Meta, PrecoMensal
 from .scenarios import simulate
 from .telemetry import snapshot
 
@@ -28,7 +28,7 @@ class HowMuchLoginView(LoginView):
 
 def home(request):
     """Página pública de apresentação da plataforma (produtos/módulos)."""
-    return render(request, "core/home.html", {"commodities": Commodity.objects.all()})
+    return render(request, "core/home.html", {"commodities": Commodity.objects.ready()})
 
 
 @login_required
@@ -56,17 +56,18 @@ def _series(commodity):
 
 
 def _pick(request):
-    commodities = list(Commodity.objects.all())
+    commodities = list(visible_commodities(request))
     if not commodities:
-        raise Http404
+        return [], None
     slug = request.GET.get("c")
-    current = next((c for c in commodities if c.slug == slug), commodities[0])
-    return commodities, current
+    return commodities, next((c for c in commodities if c.slug == slug), commodities[0])
 
 
 @login_required
 def forecasts(request):
     commodities, current = _pick(request)
+    if not current:
+        return render_empty(request, "forecasts", "Previsões")
     series = _series(current)
     return render(request, "core/forecasts.html", {
         "active": "forecasts",
@@ -84,11 +85,15 @@ def _avg_forecast(commodity):
 @login_required
 def scenarios(request):
     commodities, current = _pick(request)
+    if not current:
+        return render_empty(request, "scenarios", "Cenários")
+    cliente = current_cliente(request)
+    saved = Cenario.objects.filter(cliente=cliente) if cliente else Cenario.objects.filter(cliente=None, user=request.user)
     return render(request, "core/scenarios.html", {
         "active": "scenarios",
         "commodities": commodities,
         "current": current,
-        "saved": Cenario.objects.filter(user=request.user).select_related("commodity")[:10],
+        "saved": saved.select_related("commodity")[:10],
         "initial": {
             "unit": current.unit,
             "avg_price": float(_avg_forecast(current)),
@@ -102,7 +107,7 @@ def scenarios(request):
 def save_scenario(request):
     try:
         body = json.loads(request.body)
-        commodity = Commodity.objects.get(slug=body["commodity"])
+        commodity = visible_commodities(request).get(slug=body["commodity"])
         shock = Decimal(str(body["price_shock"]))
         volume = Decimal(str(body["volume"]))
         hedge = int(body["hedge"])
@@ -114,7 +119,7 @@ def save_scenario(request):
 
     base, scen = simulate(_avg_forecast(commodity), volume, shock, hedge)
     c = Cenario.objects.create(
-        user=request.user, commodity=commodity, name=name, price_shock=shock,
+        user=request.user, cliente=current_cliente(request), commodity=commodity, name=name, price_shock=shock,
         volume=volume, hedge=hedge, baseline_cost=base, scenario_cost=scen,
     )
     return JsonResponse({
@@ -125,13 +130,16 @@ def save_scenario(request):
 
 @login_required
 def decisions(request):
-    commodities = list(Commodity.objects.all())
+    cliente = current_cliente(request)
+    if not cliente:
+        return render_empty(request, "decisions", "Decisões")
+    commodities = list(Commodity.objects.ready().filter(clientes=cliente))
     months = list(
-        PrecoMensal.objects.filter(is_forecast=False).order_by("-month")
+        PrecoMensal.objects.filter(is_forecast=False, commodity__in=commodities).order_by("-month")
         .values_list("month", flat=True).distinct()[:24]
     )
     rows, total, decided, wins = [], Decimal(0), 0, 0
-    for d in Decisao.objects.filter(user=request.user).select_related("commodity"):
+    for d in Decisao.objects.filter(cliente=cliente).select_related("commodity"):
         ref, gain = evaluate(d)
         rows.append({"d": d, "ref": ref, "gain": gain})
         if gain is not None:
@@ -143,6 +151,7 @@ def decisions(request):
         "commodities": commodities,
         "months": months,
         "rows": rows,
+        "can_edit": request.user.is_staff,
         "total_gain": total,
         "decided": decided,
         "hit_rate": round(wins / decided * 100) if decided else None,
@@ -151,21 +160,29 @@ def decisions(request):
 
 
 @login_required
+@admin_required
 @require_POST
 def decision_save(request):
+    cliente = current_cliente(request)
+    if not cliente:
+        messages.error(request, "Escolha um cliente no topo da página antes de registrar.")
+        return redirect("decisions")
     form = DecisaoForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Confira os campos: " + "; ".join(f"{k}" for k in form.errors))
         return redirect("decisions")
     cd = form.cleaned_data
-    commodity = get_object_or_404(Commodity, slug=cd["commodity"])
+    commodity = Commodity.objects.ready().filter(slug=cd["commodity"], clientes=cliente).first()
+    if commodity is None:
+        messages.error(request, "Essa commodity não está liberada para o cliente.")
+        return redirect("decisions")
     month = cd["month"].replace(day=1)
     market = PrecoMensal.objects.filter(commodity=commodity, month=month, is_forecast=False).first()
     if market is None:
         messages.error(request, "Escolha um mês do histórico.")
         return redirect("decisions")
     Decisao.objects.create(
-        user=request.user, commodity=commodity, kind=cd["kind"], month=month,
+        cliente=cliente, created_by=request.user, commodity=commodity, kind=cd["kind"], month=month,
         volume=cd["volume"], price=cd["price"] or market.value, note=cd["note"],
     )
     messages.success(request, "Decisão registrada.")
@@ -173,14 +190,17 @@ def decision_save(request):
 
 
 @login_required
+@admin_required
 @require_POST
 def decision_delete(request, pk):
-    get_object_or_404(Decisao, pk=pk, user=request.user).delete()
+    cliente = current_cliente(request)
+    get_object_or_404(Decisao, pk=pk, cliente=cliente).delete()
     return redirect("decisions")
 
 
 # ---------------------------------------------------------------- Dados
 @login_required
+@admin_required
 def data_page(request):
     inventory = []
     for c in Commodity.objects.all():
@@ -195,15 +215,13 @@ def data_page(request):
         "active": "data",
         "inventory": inventory,
         "imports": ImportacaoDados.objects.select_related("user")[:10],
-        "can_import": request.user.is_staff,
     })
 
 
 @login_required
+@admin_required
 @require_POST
 def data_import_view(request):
-    if not request.user.is_staff:
-        raise PermissionDenied
     f = request.FILES.get("file")
     if not f:
         messages.error(request, "Escolha um arquivo CSV.")
@@ -226,6 +244,7 @@ def _csv_response(name):
 
 
 @login_required
+@admin_required
 def data_export(request):
     resp = _csv_response("howmuch_precos.csv")
     w = csv.writer(resp)
@@ -237,6 +256,7 @@ def data_export(request):
 
 
 @login_required
+@admin_required
 def data_template(request):
     resp = _csv_response("modelo_importacao.csv")
     w = csv.writer(resp)
@@ -248,19 +268,30 @@ def data_template(request):
 # ---------------------------------------------------------- Comparativo
 @login_required
 def comparison_page(request):
-    rows = comparison.build(request.user)
+    commodities = list(visible_commodities(request))
+    if not commodities:
+        return render_empty(request, "comparison", "Comparativo")
+    cliente = current_cliente(request)
     return render(request, "core/comparison.html", {
-        "active": "comparison", "rows": rows, "initial": {"series": comparison.index_series()},
+        "active": "comparison",
+        "rows": comparison.build(cliente, commodities),
+        "can_edit": request.user.is_staff and cliente is not None,
+        "initial": {"series": comparison.index_series(commodities)},
     })
 
 
 @login_required
+@admin_required
 @require_POST
 def meta_save(request):
-    commodity = get_object_or_404(Commodity, slug=request.POST.get("commodity", ""))
+    cliente = current_cliente(request)
+    if not cliente:
+        messages.error(request, "Escolha um cliente no topo da página antes de definir metas.")
+        return redirect("comparison")
+    commodity = get_object_or_404(Commodity.objects.ready(), slug=request.POST.get("commodity", ""), clientes=cliente)
     raw = request.POST.get("target", "").strip().replace(",", ".")
     if not raw:
-        Meta.objects.filter(user=request.user, commodity=commodity).delete()
+        Meta.objects.filter(cliente=cliente, commodity=commodity).delete()
         messages.success(request, f"Meta de {commodity.name} removida.")
         return redirect("comparison")
     try:
@@ -271,6 +302,20 @@ def meta_save(request):
     except InvalidOperation:
         messages.error(request, "Preço-alvo inválido.")
         return redirect("comparison")
-    Meta.objects.update_or_create(user=request.user, commodity=commodity, defaults={"target_price": target})
+    Meta.objects.update_or_create(cliente=cliente, commodity=commodity, defaults={"target_price": target})
     messages.success(request, f"Meta de {commodity.name} salva.")
     return redirect("comparison")
+
+
+# ------------------------------------------------- "ver como" (administrador)
+@login_required
+@admin_required
+@require_POST
+def set_cliente_ativo(request):
+    pk = request.POST.get("cliente", "")
+    if pk and Cliente.objects.filter(pk=pk).exists():
+        request.session[SESSION_KEY] = int(pk)
+    else:
+        request.session.pop(SESSION_KEY, None)
+    nxt = request.POST.get("next", "")
+    return redirect(nxt if nxt.startswith("/app/") else "dashboard")
