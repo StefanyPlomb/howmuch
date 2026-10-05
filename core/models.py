@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -60,3 +61,63 @@ class Leitura(models.Model):
 
     def __str__(self):
         return f"{self.code} · {self.source}"
+
+
+class Commodity(models.Model):
+    slug = models.SlugField(unique=True)
+    name = models.CharField("nome", max_length=60)
+    unit = models.CharField("unidade", max_length=30)
+    description = models.CharField("descrição", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "commodity"
+        verbose_name_plural = "commodities"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class PrecoMensal(models.Model):
+    """Preço histórico (is_forecast=False) ou previsão com banda low/high."""
+
+    commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE, related_name="precos")
+    month = models.DateField("mês")
+    value = models.DecimalField("preço", max_digits=12, decimal_places=2)
+    low = models.DecimalField("mínimo previsto", max_digits=12, decimal_places=2, null=True, blank=True)
+    high = models.DecimalField("máximo previsto", max_digits=12, decimal_places=2, null=True, blank=True)
+    is_forecast = models.BooleanField("é previsão", default=False)
+
+    class Meta:
+        verbose_name = "preço mensal"
+        verbose_name_plural = "preços mensais"
+        ordering = ["commodity", "month"]
+        constraints = [models.UniqueConstraint(fields=["commodity", "month"], name="preco_unico_por_mes")]
+
+    def __str__(self):
+        return f"{self.commodity} · {self.month:%m/%Y}"
+
+
+class Cenario(models.Model):
+    """Simulação salva: choque de preço + volume + % protegido (hedge)."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cenarios")
+    commodity = models.ForeignKey(Commodity, on_delete=models.PROTECT, related_name="cenarios")
+    name = models.CharField("nome", max_length=80)
+    price_shock = models.DecimalField("choque de preço (%)", max_digits=5, decimal_places=1)
+    volume = models.DecimalField("volume (12 meses)", max_digits=14, decimal_places=2)
+    hedge = models.PositiveSmallIntegerField("proteção/hedge (%)")
+    baseline_cost = models.DecimalField("custo base", max_digits=16, decimal_places=2)
+    scenario_cost = models.DecimalField("custo no cenário", max_digits=16, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "cenário"
+        ordering = ["-created_at"]
+
+    @property
+    def impact(self):
+        return self.scenario_cost - self.baseline_cost
+
+    def __str__(self):
+        return self.name

@@ -1,0 +1,53 @@
+{% extends "core/base_app.html" %}
+{% load static %}
+
+{% block title %}Previsões · How Much{% endblock %}
+{% block crumb %}Previsões{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Previsões de preço</h1>
+      <p class="muted">Histórico de 36 meses e projeção de 12 meses com faixa de incerteza.</p>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Commodity">
+    {% for c in commodities %}
+      <a href="?c={{ c.slug }}" role="tab" class="tab {% if c.slug == current.slug %}on{% endif %}" {% if c.slug == current.slug %}aria-selected="true"{% endif %}>{{ c.name }}</a>
+    {% endfor %}
+  </div>
+
+  <section class="kpis" aria-label="Indicadores da previsão">
+    <article class="card kpi"><div class="kpi-head"><span>Último preço</span></div><div class="kpi-value" id="f-last">—</div><span class="muted small">por {{ current.unit }}</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Preço previsto em 12 meses</span></div><div class="kpi-value" id="f-end">—</div><span class="chip" id="f-end-delta">—</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Média prevista</span></div><div class="kpi-value" id="f-avg">—</div><span class="muted small">próximos 12 meses</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Faixa em 12 meses</span></div><div class="kpi-value kpi-sm" id="f-range">—</div><span class="muted small">mínimo – máximo previsto</span></article>
+  </section>
+
+  <article class="card chart-card">
+    <header class="card-head">
+      <div>
+        <h2>{{ current.name }} · {{ current.description }}</h2>
+        <p class="muted small">Linha cheia = histórico · tracejada = previsão · faixa = incerteza</p>
+      </div>
+      <span class="legend"><i class="lg hist"></i>Histórico <i class="lg fc"></i>Previsão <i class="lg band"></i>Faixa</span>
+    </header>
+    <div class="chart tall" id="fchart" role="img" aria-label="Gráfico de preço histórico e previsão de {{ current.name }}"></div>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Previsão mês a mês</h2><p class="muted small">Valores em R$ por {{ current.unit }}</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Mês</th><th class="num">Previsto</th><th class="num">Mínimo</th><th class="num">Máximo</th><th class="num">Vs. último preço</th></tr></thead>
+        <tbody id="ftable"></tbody>
+      </table>
+    </div>
+  </article>
+</div>
+{{ initial|json_script:"initial-data" }}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/forecast.js' %}"></script>{% endblock %}

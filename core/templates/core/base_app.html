@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+
+{% block body_class %}app{% endblock %}
+
+{% block content %}
+<div class="shell">
+  <aside class="side" aria-label="Navegação">
+    <a href="{% url 'home' %}" class="brand">
+      <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span class="brand-name">How<b>Much</b></span>
+    </a>
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" {% if active == 'dashboard' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg> Visão geral</a>
+      <a href="{% url 'forecasts' %}" {% if active == 'forecasts' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-trend"/></svg> Previsões</a>
+      <a href="{% url 'scenarios' %}" {% if active == 'scenarios' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-flask"/></svg> Cenários</a>
+    </nav>
+    <p class="side-foot muted small">Plataforma de estudo · dados fictícios</p>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="muted small topbar-title">{% block crumb %}Plataforma{% endblock %}</span>
+      <div class="topbar-right">
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
+          <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+          <svg class="ico t-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+        </button>
+        <div class="user-chip">
+          <span class="avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</span>
+          <span class="user-meta">
+            <strong>{{ request.user.get_username }}</strong>
+            <small class="muted">{% if request.user.is_superuser %}Administrador{% else %}Usuário{% endif %}</small>
+          </span>
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">
+            <svg class="ico" aria-hidden="true"><use href="#i-log-out"/></svg>
+          </button>
+        </form>
+      </div>
+    </header>
+    {% block app_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

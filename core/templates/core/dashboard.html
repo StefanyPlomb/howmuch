@@ -1,45 +1,16 @@
-{% extends "core/base.html" %}
+{% extends "core/base_app.html" %}
 {% load static %}
 
 {% block title %}Painel · How Much{% endblock %}
-{% block body_class %}page-dash{% endblock %}
 
-{% block content %}
-<header class="topbar">
-  <div class="brand">
-    <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
-    <span class="brand-name">How<b>Much</b></span>
-  </div>
-
-  <div class="topbar-right">
-    <span class="live-tag" id="live-tag"><i class="pulse"></i> Ao vivo</span>
-    <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
-      <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
-      <svg class="ico t-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-    </button>
-    <div class="user-chip">
-      <span class="avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</span>
-      <span class="user-meta">
-        <strong>{{ request.user.get_username }}</strong>
-        <small class="muted">{% if request.user.is_superuser %}Administrador{% else %}Usuário{% endif %}</small>
-      </span>
-    </div>
-    <form method="post" action="{% url 'logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">
-        <svg class="ico" aria-hidden="true"><use href="#i-log-out"/></svg>
-      </button>
-    </form>
-  </div>
-</header>
-
-<main class="dash">
+{% block app_content %}
+<div class="dash">
   <div class="dash-title">
     <div>
       <h1>Visão geral</h1>
       <p class="muted">Telemetria de valores · dados fictícios gravados no banco</p>
     </div>
-    <span class="muted small"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Atualizado às <b id="updated">--:--:--</b></span>
+    <span class="muted small"><span class="live-tag" id="live-tag"><i class="pulse"></i> Ao vivo</span> · <svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Atualizado às <b id="updated">--:--:--</b></span>
   </div>
 
   <section class="kpis" aria-label="Indicadores">
@@ -104,7 +75,7 @@
       </table>
     </div>
   </article>
-</main>
+</div>
 
 {{ initial|json_script:"initial-data" }}
 {% endblock %}

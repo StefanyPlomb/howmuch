@@ -12,6 +12,14 @@ por login, dashboard e a API de telemetria.
 
 ## Ideia
 
+Plataforma de estudo inspirada em plataformas de análise de mercado de commodities
+(previsão → cenários → governança), com identidade visual própria:
+
+- **Previsões:** histórico de 36 meses + projeção de 12 com faixa de incerteza.
+- **Cenários:** choque de preço, volume e hedge sobre a previsão; os cenários
+  ficam salvos por usuário (fórmula em `core/scenarios.py`, recalculada no servidor).
+- **Visão geral:** painel de custos, categorias e leituras.
+
 - Tudo é registrado **somente no Postgres**. As tabelas (`Categoria`, `Fonte`,
   `PontoSerie`, `Leitura`) e os dados iniciais fictícios vêm das *migrations*
   versionadas (`core/migrations/`), então `make up` sempre entrega o banco já
@@ -56,7 +64,8 @@ Isso sobe dois serviços:
 
 Acesso: **http://localhost:8011**
 
-- Painel: `/` (exige login) · Login: `/login/`
+- Página pública (apresentação da plataforma): `/` · Login: `/login/`
+- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` (exigem login)
 - Admin do Django: `/admin/`
 - API da telemetria (autenticada): `/api/telemetria/`
 

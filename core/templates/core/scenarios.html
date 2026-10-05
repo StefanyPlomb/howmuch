@@ -1,0 +1,82 @@
+{% extends "core/base_app.html" %}
+{% load static %}
+
+{% block title %}Cenários · How Much{% endblock %}
+{% block crumb %}Cenários{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Laboratório de cenários</h1>
+      <p class="muted">Simule “e se o preço subir?” sobre a previsão e veja o impacto no custo.</p>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Commodity">
+    {% for c in commodities %}
+      <a href="?c={{ c.slug }}" role="tab" class="tab {% if c.slug == current.slug %}on{% endif %}">{{ c.name }}</a>
+    {% endfor %}
+  </div>
+
+  <section class="grid sc-grid">
+    <article class="card">
+      <header class="card-head"><div><h2>Parâmetros</h2><p class="muted small">{{ current.name }} · preço médio previsto <b id="s-avg">—</b>/{{ current.unit }}</p></div></header>
+      <form class="form" id="sc-form" onsubmit="return false">
+        <div class="field">
+          <label for="s-volume">Volume nos próximos 12 meses ({{ current.unit }})</label>
+          <div class="input"><input id="s-volume" type="number" min="1" step="1" value="10000" inputmode="numeric"></div>
+        </div>
+        <div class="field">
+          <label for="s-shock">Choque de preço: <b id="s-shock-v">+10%</b></label>
+          <input id="s-shock" class="range" type="range" min="-30" max="50" step="1" value="10">
+        </div>
+        <div class="field">
+          <label for="s-hedge">Parcela protegida (hedge): <b id="s-hedge-v">30%</b></label>
+          <input id="s-hedge" class="range" type="range" min="0" max="100" step="5" value="30">
+        </div>
+        <div class="field">
+          <label for="s-name">Nome do cenário</label>
+          <div class="input"><input id="s-name" type="text" maxlength="80" placeholder="Ex.: Seca + dólar alto"></div>
+        </div>
+        <button type="button" class="btn btn-primary" id="s-save"><span>Salvar cenário</span><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></button>
+        <p class="muted small" id="s-msg" role="status"></p>
+      </form>
+    </article>
+
+    <article class="card">
+      <header class="card-head"><div><h2>Resultado</h2><p class="muted small">Custo estimado em 12 meses</p></div></header>
+      <div class="result">
+        <div><span class="muted small">Custo base (previsão)</span><div class="kpi-value" id="r-base">—</div></div>
+        <div><span class="muted small">Custo no cenário</span><div class="kpi-value" id="r-scen">—</div></div>
+        <div><span class="muted small">Impacto</span><div class="kpi-value" id="r-impact">—</div><span class="chip" id="r-chip">—</span></div>
+      </div>
+      <div class="cmp" aria-hidden="true"><i id="bar-base"></i><i id="bar-scen"></i></div>
+    </article>
+  </section>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Seus cenários salvos</h2><p class="muted small">Ficam gravados no banco, por usuário</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Nome</th><th>Commodity</th><th class="num">Choque</th><th class="num">Hedge</th><th class="num">Custo base</th><th class="num">Cenário</th><th class="num">Impacto</th></tr></thead>
+        <tbody id="saved">
+          {% for s in saved %}
+          <tr>
+            <td><b>{{ s.name }}</b></td><td>{{ s.commodity.name }}</td>
+            <td class="num">{{ s.price_shock|floatformat:1 }}%</td><td class="num">{{ s.hedge }}%</td>
+            <td class="num">R$ {{ s.baseline_cost|floatformat:"2g" }}</td><td class="num">R$ {{ s.scenario_cost|floatformat:"2g" }}</td>
+            <td class="num {% if s.impact > 0 %}down-txt{% else %}up-txt{% endif %}"><b>R$ {{ s.impact|floatformat:"2g" }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="muted small empty" id="saved-empty" {% if saved %}hidden{% endif %}>Nenhum cenário salvo ainda.</p>
+    </div>
+  </article>
+</div>
+{{ initial|json_script:"initial-data" }}
+<script>window.HM_SC = { commodity: "{{ current.slug }}", saveUrl: "{% url 'scenario_save' %}", csrf: "{{ csrf_token }}" };</script>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/cenarios.js' %}"></script>{% endblock %}
