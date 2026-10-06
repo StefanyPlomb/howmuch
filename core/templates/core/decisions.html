@@ -1,0 +1,70 @@
+{% extends "core/base_app.html" %}
+
+{% block title %}Decisões · How Much{% endblock %}
+{% block crumb %}Decisões{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Decisões</h1>
+      <p class="muted">{% if can_edit %}Registre as decisões do cliente <b>{{ cliente_atual.name }}</b> e compare com o mercado nos 3 meses seguintes.{% else %}Decisões registradas pela consultoria para {{ cliente_atual.name }}, comparadas com o mercado nos 3 meses seguintes.{% endif %}</p>
+    </div>
+  </div>
+
+  <section class="kpis" aria-label="Resumo">
+    <article class="card kpi"><div class="kpi-head"><span>Resultado acumulado</span></div>
+      <div class="kpi-value {% if total_gain > 0 %}up-txt{% elif total_gain < 0 %}down-txt{% endif %}">R$ {{ total_gain|floatformat:"0g" }}</div>
+      <span class="muted small">vs. média do mercado</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Taxa de acerto</span></div>
+      <div class="kpi-value">{% if hit_rate is None %}—{% else %}{{ hit_rate }}%{% endif %}</div>
+      <span class="muted small">decisões com ganho</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Avaliadas</span></div><div class="kpi-value">{{ decided }}</div><span class="muted small">com 3 meses de histórico depois</span></article>
+    <article class="card kpi"><div class="kpi-head"><span>Em aberto</span></div><div class="kpi-value">{{ open_count }}</div><span class="muted small">aguardando mercado</span></article>
+  </section>
+
+  {% if can_edit %}
+  <article class="card">
+    <header class="card-head"><div><h2>Nova decisão</h2><p class="muted small">Se o preço ficar em branco, usa o preço de mercado do mês escolhido.</p></div></header>
+    <form method="post" action="{% url 'decision_save' %}" class="form dec-form">
+      {% csrf_token %}
+      <div class="field"><label for="d-c">Commodity</label>
+        <div class="input"><select id="d-c" name="commodity" required>{% for c in commodities %}<option value="{{ c.slug }}">{{ c.name }} ({{ c.unit }})</option>{% endfor %}</select></div></div>
+      <div class="field"><label for="d-k">Tipo</label>
+        <div class="input"><select id="d-k" name="kind"><option value="compra">Compra</option><option value="venda">Venda</option></select></div></div>
+      <div class="field"><label for="d-m">Mês da decisão</label>
+        <div class="input"><select id="d-m" name="month" required>{% for m in months %}<option value="{{ m|date:'Y-m-d' }}">{{ m|date:"F/Y" }}</option>{% endfor %}</select></div></div>
+      <div class="field"><label for="d-v">Volume</label>
+        <div class="input"><input id="d-v" name="volume" type="number" min="0.01" step="0.01" required placeholder="Ex.: 5000"></div></div>
+      <div class="field"><label for="d-p">Preço fechado (R$, opcional)</label>
+        <div class="input"><input id="d-p" name="price" type="number" min="0.01" step="0.01" placeholder="mercado do mês"></div></div>
+      <div class="field"><label for="d-n">Justificativa (opcional)</label>
+        <div class="input"><input id="d-n" name="note" maxlength="200" placeholder="Ex.: travei antes da safra"></div></div>
+      <button type="submit" class="btn btn-primary"><span>Registrar decisão</span></button>
+    </form>
+  </article>
+  {% endif %}
+
+  <article class="card">
+    <header class="card-head"><div><h2>Histórico de decisões</h2><p class="muted small">Ganho positivo = decisão melhor que a média do mercado depois</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Mês</th><th>Commodity</th><th>Tipo</th><th class="num">Volume</th><th class="num">Preço fechado</th><th class="num">Mercado (3 m)</th><th class="num">Resultado</th><th>Nota</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.d.month|date:"m/Y" }}</td><td>{{ r.d.commodity.name }}</td><td>{{ r.d.get_kind_display }}</td>
+            <td class="num">{{ r.d.volume|floatformat:"0g" }}</td><td class="num">R$ {{ r.d.price|floatformat:"2g" }}</td>
+            <td class="num muted">{% if r.ref %}R$ {{ r.ref|floatformat:"2g" }}{% else %}—{% endif %}</td>
+            <td class="num">{% if r.gain is None %}<span class="status open">Em aberto</span>{% else %}<b class="{% if r.gain > 0 %}up-txt{% elif r.gain < 0 %}down-txt{% endif %}">R$ {{ r.gain|floatformat:"2g" }}</b>{% endif %}</td>
+            <td class="muted">{{ r.d.note|default:"—" }}</td>
+            {% if can_edit %}<td><form method="post" action="{% url 'decision_delete' r.d.pk %}" class="inline">{% csrf_token %}<button class="link-btn" type="submit" aria-label="Excluir decisão">excluir</button></form></td>{% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not rows %}<p class="muted small empty">Nenhuma decisão registrada ainda.</p>{% endif %}
+    </div>
+  </article>
+</div>
+{% endblock %}

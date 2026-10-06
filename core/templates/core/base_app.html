@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+
+{% block body_class %}app{% endblock %}
+
+{% block content %}
+<div class="shell">
+  <aside class="side" aria-label="Navegação">
+    <a href="{% url 'home' %}" class="brand">
+      <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span class="brand-name">How<b>Much</b></span>
+    </a>
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" {% if active == 'dashboard' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg> Visão geral</a>
+      <a href="{% url 'forecasts' %}" {% if active == 'forecasts' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-trend"/></svg> Previsões</a>
+      <a href="{% url 'scenarios' %}" {% if active == 'scenarios' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-flask"/></svg> Cenários</a>
+      <a href="{% url 'decisions' %}" {% if active == 'decisions' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Decisões</a>
+      <a href="{% url 'comparison' %}" {% if active == 'comparison' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-gauge"/></svg> Comparativo</a>
+      {% if is_admin %}
+      <a href="{% url 'data' %}" {% if active == 'data' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-database"/></svg> Dados</a>
+      <a href="{% url 'admin_home' %}" {% if active == 'admin' %}class="on" aria-current="page"{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg> Administração</a>
+      {% endif %}
+    </nav>
+    <p class="side-foot muted small">Plataforma de estudo · dados fictícios</p>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="muted small topbar-title">{% block crumb %}Plataforma{% endblock %}</span>
+      {% if is_admin %}
+      <form method="post" action="{% url 'cliente_ativo' %}" class="as-client">
+        {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+        <label for="as-client" class="muted small">Ver como</label>
+        <div class="input sm"><select id="as-client" name="cliente" onchange="this.form.submit()">
+          <option value="">Todos (administrador)</option>
+          {% for c in clientes_all %}<option value="{{ c.pk }}" {% if cliente_atual and cliente_atual.pk == c.pk %}selected{% endif %}>{{ c.name }}{% if not c.active %} (inativo){% endif %}</option>{% endfor %}
+        </select></div>
+        <noscript><button class="link-btn" type="submit">aplicar</button></noscript>
+      </form>
+      {% elif cliente_atual %}
+      <span class="chip">{{ cliente_atual.name }}</span>
+      {% endif %}
+      <div class="topbar-right">
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
+          <svg class="ico t-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+          <svg class="ico t-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+        </button>
+        <div class="user-chip">
+          <span class="avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</span>
+          <span class="user-meta">
+            <strong>{{ request.user.get_username }}</strong>
+            <small class="muted">{% if is_admin %}Administrador{% else %}Cliente{% endif %}</small>
+          </span>
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">
+            <svg class="ico" aria-hidden="true"><use href="#i-log-out"/></svg>
+          </button>
+        </form>
+      </div>
+    </header>
+    {% if messages %}<div class="flash">{% for m in messages %}<p class="msg {{ m.tags }}" role="status">{{ m }}</p>{% endfor %}</div>{% endif %}
+    {% block app_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

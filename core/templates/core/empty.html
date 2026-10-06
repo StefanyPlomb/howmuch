@@ -1,0 +1,19 @@
+{% extends "core/base_app.html" %}
+
+{% block title %}{{ title }} · How Much{% endblock %}
+{% block crumb %}{{ title }}{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title"><div><h1>{{ title }}</h1></div></div>
+  <article class="card empty-card">
+    {% if is_admin %}
+      <h2>Nada para mostrar ainda</h2>
+      <p class="muted">{% if title == "Decisões" %}Escolha um cliente em “Ver como”, no topo da página.{% else %}Não há commodities com série completa (≥2 meses de histórico e ≥1 de previsão). Importe preços em <a href="{% url 'data' %}">Dados</a> ou ajuste a liberação do cliente em <a href="{% url 'admin_home' %}">Administração</a>.{% endif %}</p>
+    {% else %}
+      <h2>Ainda não há conteúdo liberado</h2>
+      <p class="muted">Sua conta ainda não tem commodities liberadas. Fale com a consultoria responsável.</p>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

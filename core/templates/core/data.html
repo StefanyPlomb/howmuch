@@ -1,0 +1,59 @@
+{% extends "core/base_app.html" %}
+
+{% block title %}Dados · How Much{% endblock %}
+{% block crumb %}Dados{% endblock %}
+
+{% block app_content %}
+<div class="dash">
+  <div class="dash-title">
+    <div>
+      <h1>Dados</h1>
+      <p class="muted">Inventário das séries de preço, importação e exportação em CSV.</p>
+    </div>
+    <a class="btn btn-sm" href="{% url 'data_export' %}">Exportar tudo (CSV)</a>
+  </div>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Séries disponíveis</h2><p class="muted small">Histórico real e meses de previsão por commodity</p></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Commodity</th><th>Unidade</th><th class="num">Meses de histórico</th><th>Período</th><th class="num">Meses de previsão</th></tr></thead>
+        <tbody>
+          {% for i in inventory %}
+          <tr><td><b>{{ i.c.name }}</b></td><td class="muted">{{ i.c.unit }}</td><td class="num">{{ i.hist }}</td>
+            <td>{{ i.first|date:"m/Y" }} – {{ i.last|date:"m/Y" }}</td><td class="num">{{ i.fc }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Importar preços</h2>
+      <p class="muted small">CSV com <code>commodity,mes,preco</code> (ex.: <code>soja,2026-02,131.40</code>) ou o formato completo da exportação (<code>…,tipo,minimo,maximo</code>) · tudo ou nada · máx. 1 MB</p></div>
+      <a class="btn btn-sm" href="{% url 'data_template' %}">Baixar modelo</a></header>
+    <form method="post" action="{% url 'data_import' %}" enctype="multipart/form-data" class="form">
+      {% csrf_token %}
+      <div class="field"><label for="d-file">Arquivo CSV</label>
+        <div class="input"><input id="d-file" type="file" name="file" accept=".csv,text/csv" required></div></div>
+      <p class="muted small">No formato curto, um mês que era previsão passa a ser histórico (a faixa é descartada). Para cadastrar previsões, use o formato completo. Cada commodity precisa ficar com ≥2 meses de histórico e ≥1 de previsão. Cada importação fica registrada abaixo.</p>
+      <button type="submit" class="btn btn-primary btn-fit"><span>Importar</span></button>
+    </form>
+  </article>
+
+  <article class="card">
+    <header class="card-head"><div><h2>Últimas importações</h2></div></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Quando</th><th>Arquivo</th><th>Usuário</th><th class="num">Novos</th><th class="num">Atualizados</th></tr></thead>
+        <tbody>
+          {% for i in imports %}
+          <tr><td>{{ i.created_at|date:"d/m/Y H:i" }}</td><td>{{ i.filename }}</td><td>{{ i.user.get_username }}</td><td class="num">{{ i.created_rows }}</td><td class="num">{{ i.updated_rows }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not imports %}<p class="muted small empty">Nenhuma importação feita ainda.</p>{% endif %}
+    </div>
+  </article>
+</div>
+{% endblock %}

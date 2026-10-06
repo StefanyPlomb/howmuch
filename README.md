@@ -10,10 +10,40 @@ framework (JS puro).
 Stack: **Django 5** + **PostgreSQL 16**, com um app único (`core`) responsável
 por login, dashboard e a API de telemetria.
 
+## Papéis: administrador e cliente
+
+- **Administrador** (`is_staff`; o superusuário do `.env` já é): cadastra tudo.
+  Em **Administração** cria clientes, libera commodities por cliente, cria/remove
+  usuários e redefine senhas, e cria commodities (os preços entram em **Dados**).
+  Com **“Ver como”** (topo da página) escolhe um cliente e registra as **decisões**
+  e **metas** dele. Só o administrador acessa **Dados** (importar/exportar CSV).
+- **Cliente** (usuário com `Perfil` ligado a um `Cliente`): **só visualiza** —
+  Previsões, Comparativo, Decisões e Visão geral — e pode **simular** em Cenários
+  (os cenários salvos ficam com o cliente). Vê apenas as commodities liberadas
+  para ele e apenas as decisões/metas dele.
+- Os dois clientes de demonstração (*Cooperativa Horizonte* e *Frigorífico Aurora*)
+  vêm das migrations com commodities, metas e decisões; **os usuários deles não**
+  (senha não vai para o repositório): crie em Administração → cliente → Usuários.
+- A Visão geral (telemetria de custos) continua compartilhada por todos.
+
 ## Ideia
 
-- `core/telemetry.py` gera os números fictícios exibidos no painel — não há
-  integração com fontes reais, é só para demonstração visual.
+Plataforma de estudo inspirada em plataformas de análise de mercado de commodities
+(previsão → cenários → governança), com identidade visual própria:
+
+- **Previsões:** (por cliente) histórico de 36 meses + projeção de 12 com faixa de incerteza.
+- **Cenários:** choque de preço, volume e hedge sobre a previsão; os cenários
+  ficam salvos por usuário (fórmula em `core/scenarios.py`, recalculada no servidor).
+- **Decisões:** registra compras/vendas e compara o preço fechado com a média do mercado nos 3 meses seguintes (`core/decisions.py`); decisões recentes ficam "em aberto".
+- **Comparativo:** índice base 100 de todas as commodities, metas (teto de compra) por usuário e suas compras contra o mercado nos mesmos meses (`core/comparison.py`).
+- **Dados:** inventário das séries, exportação CSV e importação CSV (`commodity,mes,preco`) restrita a administradores, tudo-ou-nada e com registro de cada importação (`core/data_import.py`).
+- **Visão geral:** painel de custos, categorias e leituras.
+
+- Tudo é registrado **somente no Postgres**. As tabelas (`Categoria`, `Fonte`,
+  `PontoSerie`, `Leitura`) e os dados iniciais fictícios vêm das *migrations*
+  versionadas (`core/migrations/`), então `make up` sempre entrega o banco já
+  com registros, igual para todos — nunca um banco vazio. `core/telemetry.py`
+  só lê o banco. Para criar/alterar dados compartilhados, crie uma migration.
 - Tudo fica atrás de login (`django.contrib.auth`); existe um comando
   `manage.py bootstrap` idempotente que cria o superusuário a partir das
   variáveis `ADMIN_*` do `.env`.
@@ -25,21 +55,36 @@ por login, dashboard e a API de telemetria.
 
 Pré-requisito: Docker + Docker Compose.
 
+**Passo 1 (obrigatório, uma vez só):** garante que o `make` e o Docker existem
+na máquina — se o `make` faltar, o script instala na hora.
+
 ```bash
-cp .env.example .env        # ajuste os valores, principalmente as senhas
-docker compose up -d --build
+sh setup.sh
 ```
+
+**Passo 2:** sobe tudo.
+
+```bash
+make up                     # cria o .env se faltar, builda a imagem e sobe
+```
+
+Ajuste as senhas no `.env` (criado a partir do `.env.example`) e rode
+`make up` de novo se quiser mudar algo. Outros comandos: `make help`
+(`down`, `restart`, `logs`, `ps`, `clean`).
+
+Equivalente sem make: `cp .env.example .env && docker compose up -d --build`.
 
 Isso sobe dois serviços:
 
 - `db` — Postgres 16, exposto em `127.0.0.1:${DB_PORT}` (padrão 5433).
-- `web` — Django, exposto em `127.0.0.1:${WEB_PORT}` (padrão 8011). No
-  startup ele roda `migrate`, `bootstrap` (cria/atualiza o superusuário) e
-  sobe o `runserver`.
+- `web` — container separado com o site (login + tela inicial), Django +
+  gunicorn, exposto em `127.0.0.1:${WEB_PORT}` (padrão 8011). No startup ele
+  roda `migrate` (schema + dados), `bootstrap` (superusuário) e sobe o gunicorn.
 
 Acesso: **http://localhost:8011**
 
-- Painel: `/` (exige login) · Login: `/login/`
+- Página pública (apresentação da plataforma): `/` · Login: `/login/`
+- Visão geral: `/app/` · Previsões: `/app/previsoes/` · Cenários: `/app/cenarios/` · Decisões: `/app/decisoes/` · Comparativo: `/app/comparativo/` · Dados: `/app/dados/` (exigem login)
 - Admin do Django: `/admin/`
 - API da telemetria (autenticada): `/api/telemetria/`
 
@@ -59,10 +104,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ```
 config/     settings, urls e wsgi do projeto Django
-core/       app único: models, views, forms, telemetria fictícia e templates
+core/       app único: models, migrations (schema + dados), views, forms e templates
 static/     css/js/img servidos via staticfiles
 Dockerfile, docker-compose.yml    imagem da app + Postgres
 ```
 
-> ⚠️ Projeto de estudo/demo. `DJANGO_DEBUG=1` e o `runserver` do Django não
-> são adequados para produção.
+> ⚠️ Projeto de estudo/demo: troque as senhas do `.env` e use `DJANGO_DEBUG=0`
+> fora do ambiente local.

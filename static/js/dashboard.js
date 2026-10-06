@@ -162,7 +162,8 @@
     renderFeed(data.feed);
     $("updated").textContent = HM.time(data.generated_at);
     const first = data.series[0].t, last = data.series[data.series.length - 1].t;
-    $("c-window").textContent = Math.round((last - first) / 60 * 10) / 10 + " min";
+    const mins = (last - first) / 60;
+    $("c-window").textContent = mins >= 120 ? Math.round(mins / 60) + " h" : Math.round(mins) + " min";
   }
 
   async function poll() {
